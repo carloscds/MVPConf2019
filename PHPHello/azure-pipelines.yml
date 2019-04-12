@@ -1,0 +1,47 @@
+# PHP
+# Test and package your PHP project.
+# Add steps that run tests, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/php
+
+#trigger:
+#- master
+
+pool:
+  vmImage: 'Ubuntu-16.04'
+
+variables:
+  phpVersion: 7.2
+
+steps:
+- script: |
+    sudo update-alternatives --set php /usr/bin/php$(phpVersion)
+    sudo update-alternatives --set phar /usr/bin/phar$(phpVersion)
+    sudo update-alternatives --set phpdbg /usr/bin/phpdbg$(phpVersion)
+    sudo update-alternatives --set php-cgi /usr/bin/php-cgi$(phpVersion)
+    sudo update-alternatives --set phar.phar /usr/bin/phar.phar$(phpVersion)
+    php -version
+    cd PHPHello
+  displayName: 'Use PHP version $(phpVersion)'
+
+- script:
+    sudo php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+    sudo php -r "if (hash_file('SHA384', 'composer-setup.php') === '93b54496392c062774670ac18b134c3b3a95e5a5e5c8f1a9f115f203b75bf9a129d5daa8ba6a13e2cc8a1da0806388a8') { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('composer-setup.php'); } echo PHP_EOL;"
+    sudo php composer-setup.php
+    sudo mv composer.phar /usr/bin/composer
+    sudo php -r "unlink('composer-setup.php');"
+  displayName: 'composer install'
+
+- task: CopyFiles@2
+  inputs:
+    sourceFolder: 'PHPHello'
+    targetFolder: '$(Build.ArtifactStagingDirectory)'
+- task: DeleteFiles@1
+  inputs:
+    sourceFolder: '$(Build.ArtifactStagingDirectory)'
+    contents: '**/*.yml' 
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    pathtoPublish: '$(Build.ArtifactStagingDirectory)' 
+    artifactName: 'drop' 
+
